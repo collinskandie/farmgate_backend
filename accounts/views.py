@@ -10,9 +10,7 @@ from .serializers import FarmSerializer, FarmDetailsSerializer, CowCreateSeriali
 from .serializers import FarmUserCreateSerializer, AccountCreateSerializer, SystemUserCreateSerializer, LoginSerializer, AccountDetailsSerializer, FarmCreateSerializer
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
-
 from django.shortcuts import get_object_or_404
-
 
 class CreateFarmUserAPIView(APIView):
     # permission_classes = [IsAuthenticated]
@@ -291,6 +289,27 @@ class FarmDetailsAPIView(APIView):
 
 class CreateCowAPIView(APIView):
     permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        user = request.user
+
+        cows = Cow.objects.select_related("farm").all()
+        cow_list = [
+            {
+                "id": cow.id,
+                "name": cow.name,
+                "tag_number": cow.tag_number,
+                "breed": cow.breed,
+                "date_of_birth": cow.date_of_birth,
+                "farm": {
+                    "id": cow.farm.id,
+                    "name": cow.farm.name,
+                },
+            }
+            for cow in cows
+        ]
+
+        return Response(cow_list, status=status.HTTP_200_OK)
 
     def post(self, request, farm_id):
         user = request.user

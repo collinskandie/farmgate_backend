@@ -29,6 +29,7 @@ urlpatterns = [
         name="create-farm",
     ),
     path("farm/<int:farm_id>/", FarmDetailsAPIView.as_view()),
+    path("getcows/", CreateCowAPIView.as_view()),
     path(
         "farm/<int:farm_id>/cows/create/",
         CreateCowAPIView.as_view(),

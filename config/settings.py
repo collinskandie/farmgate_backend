@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'corsheaders',
     "rest_framework",
     'accounts',
+    'production',
 ]
 
 MIDDLEWARE = [
@@ -72,6 +73,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "https://ff67472e76ef.ngrok-free.app"
 ]
 
 CORS_ALLOW_HEADERS = list(default_headers) + [
