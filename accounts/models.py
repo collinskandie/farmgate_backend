@@ -76,12 +76,10 @@ class User(AbstractUser):
     ]
     username = None  # 👈 email-only auth
     email = models.EmailField(unique=True)
-
     role = models.CharField(
         max_length=50,
         choices=ROLE_CHOICES
     )
-
     # Tenant scope (null = system user)
     account = models.ForeignKey(
         Account,
@@ -90,14 +88,12 @@ class User(AbstractUser):
         blank=True,
         related_name="users",
     )
-
     # Farm assignments
     farms = models.ManyToManyField(
         Farm,
         blank=True,
         related_name="users",
     )
-
     # Employee profile fields
     full_name = models.CharField(max_length=255)
     phone = models.CharField(max_length=20)

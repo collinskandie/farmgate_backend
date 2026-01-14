@@ -1,6 +1,6 @@
 from django.db import models
 from django.conf import settings
-from accounts.models import Cow
+from accounts.models import Cow, Farm
 
 
 class MilkRecord(models.Model):
@@ -45,3 +45,12 @@ class MilkRecord(models.Model):
 
     def __str__(self):
         return f"{self.cow} | {self.date} | {self.session} | {self.quantity_in_liters}L"
+
+class ChatSession(models.Model):
+    phone = models.CharField(max_length=20, unique=True)
+    farm = models.ForeignKey(
+        Farm, on_delete=models.CASCADE, null=True, blank=True
+    )
+    step = models.CharField(max_length=50, default="start")
+    data = models.JSONField(default=dict)
+    updated_at = models.DateTimeField(auto_now=True)

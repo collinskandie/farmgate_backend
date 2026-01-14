@@ -18,15 +18,47 @@ class AccountCreateSerializer(serializers.ModelSerializer):
 
 class FarmUserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    farms = serializers.PrimaryKeyRelatedField(
+        queryset=Farm.objects.all(),
+        many=True,
+        required=False
+    )
 
     class Meta:
         model = User
-        fields = ["email", "password", "role", "full_name",
-                  "phone", "national_id", "role_title"]
+        fields = [
+            "email",
+            "password",
+            "role",
+            "full_name",
+            "phone",
+            "national_id",
+            "role_title",
+            "farms",
+        ]
+
+    def validate_farms(self, farms):
+        account = self.context.get("account")
+
+        if not account:
+            return farms
+
+        invalid = Farm.objects.filter(
+            id__in=[farm.id for farm in farms]
+        ).exclude(account=account)
+
+        if invalid.exists():
+            raise serializers.ValidationError(
+                "One or more farms do not belong to this account."
+            )
+
+        return farms
+
 
     def create(self, validated_data):
         password = validated_data.pop("password")
-        email = validated_data.pop("email")  # 👈 POP IT
+        farms = validated_data.pop("farms", [])
+        email = validated_data.pop("email")
 
         user = User(
             email=email,
@@ -34,6 +66,13 @@ class FarmUserCreateSerializer(serializers.ModelSerializer):
         )
         user.set_password(password)
         user.save()
+
+        if farms:
+            user.farms.set(farms)
+
+        if user.role == User.MANAGER:
+            user.farms.set(Farm.objects.filter(account=user.account))
+
         return user
 
 

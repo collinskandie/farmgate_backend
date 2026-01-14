@@ -36,7 +36,11 @@ class CreateFarmUserAPIView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        serializer = FarmUserCreateSerializer(data=request.data)
+        serializer = FarmUserCreateSerializer(
+            data=request.data,
+            context={"account": account}
+        )
+
         if serializer.is_valid():
             new_user = serializer.save(account=account)
 
