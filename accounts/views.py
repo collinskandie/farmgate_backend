@@ -248,12 +248,12 @@ class AccountDetailsAPIView(APIView):
     def get(self, request, account_id):
         user = request.user
 
-        # 🔒 Only system users can view ANY account
-        if not user.is_system_user():
-            return Response(
-                {"detail": "Not allowed"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        # # 🔒 Only system users can view ANY account
+        # if not user.is_system_user():
+        #     return Response(
+        #         {"detail": "Not allowed"},
+        #         status=status.HTTP_403_FORBIDDEN,
+        #     )
 
         account = get_object_or_404(
             Account.objects.prefetch_related("farms", "users"),

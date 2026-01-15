@@ -271,7 +271,10 @@ class ProductionCallBack(APIView):
         if session.step == "select_session":
             if text not in ["1", "2"]:
                 self.send_message(
-                    phone, "Reply 1 for Morning or 2 for Evening.")
+                    phone, 
+                    f"👋 Hello {user.full_name}\n\n"
+                    "Please reply with 1 for Morning or 2 for Evening."
+                    )
                 return
 
             session.data["session"] = (
@@ -301,6 +304,49 @@ class ProductionCallBack(APIView):
         # -----------------------------------------------
         # MILK ENTRY
         # -----------------------------------------------
+        # if session.step == "enter_milk":
+        #     cows = list(Cow.objects.filter(farm=session.farm).order_by("id"))
+
+        #     try:
+        #         values = [Decimal(v.strip()) for v in text.split(",")]
+        #     except (InvalidOperation, ValueError):
+        #         self.send_message(
+        #             phone,
+        #             "❌ Invalid format.\nExample: 10,8.5,9"
+        #         )
+        #         return
+
+        #     if len(values) != len(cows):
+        #         self.send_message(
+        #             phone,
+        #             f"❌ You sent {len(values)} values but you have {len(cows)} cows."
+        #         )
+        #         return
+
+        #     today = date.today()
+        #     session_type = session.data["session"]
+
+        #     for cow, qty in zip(cows, values):
+        #         MilkRecord.objects.update_or_create(
+        #             cow=cow,
+        #             date=today,
+        #             session=session_type,
+        #             defaults={
+        #                 "quantity_in_liters": qty,
+        #                 "recorded_by": user,
+        #             }
+        #         )
+
+        #     self.reset_session(session)
+
+        #     self.send_message(
+        #         phone,
+        #         "✅ Milk production recorded successfully. Thank you!"
+        #     )
+        #     return
+                # -----------------------------------------------
+        # MILK ENTRY
+        # -----------------------------------------------
         if session.step == "enter_milk":
             cows = list(Cow.objects.filter(farm=session.farm).order_by("id"))
 
@@ -320,6 +366,65 @@ class ProductionCallBack(APIView):
                 )
                 return
 
+            # 👇 STORE, DO NOT SAVE YET
+            session.data["milk_values"] = [str(v) for v in values]
+            session.step = "confirm_milk"
+            session.save()
+
+            # Build confirmation message
+            summary_lines = []
+            for cow, qty in zip(cows, values):
+                summary_lines.append(f"{cow.tag_number}: {qty} L")
+
+            summary = "\n".join(summary_lines)
+
+            self.send_message(
+                phone,
+                "🧾 Please confirm milk production:\n\n"
+                f"{summary}\n\n"
+                "Reply:\n"
+                "1️⃣ Confirm & Save\n"
+                "2️⃣ Re-enter quantities"
+            )
+            return
+        
+                # -----------------------------------------------
+        # CONFIRM MILK
+        # -----------------------------------------------
+        if session.step == "confirm_milk":
+            if text == "2":
+                # User wants to re-enter
+                session.step = "enter_milk"
+                session.data.pop("milk_values", None)
+                session.save()
+
+                cows = Cow.objects.filter(farm=session.farm).order_by("id")
+                cow_list = "\n".join(
+                    [f"{i+1}. {cow.tag_number}" for i, cow in enumerate(cows)]
+                )
+
+                self.send_message(
+                    phone,
+                    "🔁 Okay, please re-enter milk amounts "
+                    "in the SAME order as below:\n\n"
+                    f"{cow_list}\n\n"
+                    "Example: 10,8.5,9"
+                )
+                return
+
+            if text != "1":
+                self.send_message(
+                    phone,
+                    "Please reply:\n"
+                    "1️⃣ Confirm & Save\n"
+                    "2️⃣ Re-enter quantities"
+                )
+                return
+
+            # ✅ CONFIRM & SAVE
+            cows = list(Cow.objects.filter(farm=session.farm).order_by("id"))
+            values = [Decimal(v) for v in session.data.get("milk_values", [])]
+
             today = date.today()
             session_type = session.data["session"]
 
@@ -338,9 +443,11 @@ class ProductionCallBack(APIView):
 
             self.send_message(
                 phone,
-                "✅ Milk production recorded successfully. Thank you!"
+                "✅ Milk production saved successfully. Thank you!"
             )
             return
+
+
 
         # -----------------------------------------------
         # INCIDENT
