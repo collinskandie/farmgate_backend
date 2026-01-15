@@ -270,7 +270,8 @@ class ProductionCallBack(APIView):
         # -----------------------------------------------
         if session.step == "select_session":
             if text not in ["1", "2"]:
-                self.send_message(phone, "Reply 1 for Morning or 2 for Evening.")
+                self.send_message(
+                    phone, "Reply 1 for Morning or 2 for Evening.")
                 return
 
             session.data["session"] = (
@@ -382,3 +383,42 @@ class ProductionCallBack(APIView):
 
         response = requests.post(url, headers=headers, json=payload)
         print("SEND:", response.status_code, response.text)
+
+
+class MilkBulkRecordAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        # Expect a LIST, not a dict
+        if not isinstance(request.data, list):
+            return Response(
+                {"detail": "Expected a list of records"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        created_records = []
+        errors = []
+
+        for index, record_data in enumerate(request.data):
+            serializer = MilkRecordSerializer(data=record_data)
+
+            if serializer.is_valid():
+                serializer.save(recorded_by=request.user)
+                created_records.append(serializer.data)
+            else:
+                errors.append({
+                    "index": index,
+                    "errors": serializer.errors
+                })
+
+        return Response(
+            {
+                "created_records": created_records,
+                "errors": errors
+            },
+            status=(
+                status.HTTP_201_CREATED
+                if not errors
+                else status.HTTP_207_MULTI_STATUS
+            )
+        )

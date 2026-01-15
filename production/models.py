@@ -9,9 +9,11 @@ class MilkRecord(models.Model):
     """
     MORNING = "morning"
     EVENING = "evening"
+    AFTERNOON = "afternoon"
     SESSION_CHOICES = [
         (MORNING, "Morning"),
         (EVENING, "Evening"),
+        (AFTERNOON, "Afternoon"),
     ]
     cow = models.ForeignKey(
         Cow,

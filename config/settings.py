@@ -73,16 +73,14 @@ CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://ff67472e76ef.ngrok-free.app"
+    "https://af2d497e81c1.ngrok-free.app"
 ]
 
 CORS_ALLOW_HEADERS = list(default_headers) + [
     "authorization",
     "x-auth-token",
 ]
-
 AUTH_USER_MODEL = "accounts.User"
-
 ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
