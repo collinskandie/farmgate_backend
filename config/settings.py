@@ -73,8 +73,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://af2d497e81c1.ngrok-free.app",
-    "https://a2a4eac1d1f6.ngrok-free.app",
+    "https://f4bf1aadb95d.ngrok-free.app",
     "http://172.16.0.112",
     "http://41.89.183.112"
 ]
