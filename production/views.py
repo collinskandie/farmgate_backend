@@ -252,7 +252,8 @@ class ProductionCallBack(APIView):
                     phone,
                     "Select milk session:\n\n"
                     "1️⃣ Morning\n"
-                    "2️⃣ Evening"
+                    "2️⃣ Afternoon\n"
+                    "3️⃣ Evening"
                 )
                 return
 
@@ -269,16 +270,16 @@ class ProductionCallBack(APIView):
         # SESSION (Morning / Evening)
         # -----------------------------------------------
         if session.step == "select_session":
-            if text not in ["1", "2"]:
+            if text not in ["1", "2", "3"]:
                 self.send_message(
                     phone, 
                     f"👋 Hello {user.full_name}\n\n"
-                    "Please reply with 1 for Morning or 2 for Evening."
+                    "Please reply with 1 for Morning or 2 for Afternoon or 3 for Evening."
                     )
                 return
 
             session.data["session"] = (
-                MilkRecord.MORNING if text == "1" else MilkRecord.EVENING
+                MilkRecord.MORNING if text == "1" else MilkRecord.AFTERNOON if text == "2" else MilkRecord.EVENING
             )
             session.step = "enter_milk"
             session.save()
