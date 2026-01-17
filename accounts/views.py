@@ -269,35 +269,76 @@ class FarmDetailsAPIView(APIView):
     """
     Retrieve details of a specific farm
     """
-
     permission_classes = [IsAuthenticated]
 
     def get(self, request, farm_id):
         user = request.user
 
-        # 🔒 Only system users can view ANY farm
-        if not user.is_system_user():
-            return Response(
-                {"detail": "Not allowed"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        farm = get_object_or_404(Farm, id=farm_id)
 
-        farm = get_object_or_404(
-            Farm,
-            id=farm_id,
-        )
+        # 🔓 System users can view any farm
+        if user.is_system_user():
+            pass
+
+        # 🔒 Tenant users can only view farms in their account
+        else:
+            if not user.account or user.account_id != farm.account_id:
+                return Response(
+                    {"detail": "Not allowed"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
         serializer = FarmDetailsSerializer(farm)
-
         return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class CreateCowAPIView(APIView):
     permission_classes = [IsAuthenticated]
     
+    # def get(self, request):
+    #     user = request.user
+
+    #     cows = Cow.objects.select_related("farm").all()
+    #     cow_list = [
+    #         {
+    #             "id": cow.id,
+    #             "name": cow.name,
+    #             "tag_number": cow.tag_number,
+    #             "breed": cow.breed,
+    #             "date_of_birth": cow.date_of_birth,
+    #             "farm": {
+    #                 "id": cow.farm.id,
+    #                 "name": cow.farm.name,
+    #             },
+    #         }
+    #         for cow in cows
+    #     ]
+
+    #     return Response(cow_list, status=status.HTTP_200_OK)
     def get(self, request):
         user = request.user
 
-        cows = Cow.objects.select_related("farm").all()
+        cows = Cow.objects.select_related(
+            "farm",
+            "farm__account"
+        )
+
+        # 🔓 System users see everything
+        if user.is_system_user():
+            pass
+
+        # 🔒 Tenant users are scoped to their account
+        else:
+            if not user.account:
+                return Response(
+                    {"detail": "User has no account assigned"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            cows = cows.filter(
+                farm__account=user.account
+            )
+
         cow_list = [
             {
                 "id": cow.id,
