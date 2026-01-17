@@ -590,7 +590,6 @@ class ProductionCallBack(APIView):
             f"👋 Hello {user.full_name}\n\nWhat would you like to do?\n\n" +
             "\n".join(menu)
         )
-
     def handle_menu(self, session, user, text):
         if text == "1":
             session.step = "select_session"
@@ -612,17 +611,14 @@ class ProductionCallBack(APIView):
             "2": MilkRecord.AFTERNOON,
             "3": MilkRecord.EVENING,
         }
-
         if text not in session_map:
             return self.send(user.phone, "Reply 1, 2 or 3.")
 
         session.data["session"] = session_map[text]
         session.step = "enter_milk"
         session.save()
-
         cows = Cow.objects.filter(farm=session.farm)
         cow_list = "\n".join(f"{i+1}. {c.tag_number}" for i, c in enumerate(cows))
-
         self.send(
             user.phone,
             f"Enter milk amounts separated by commas:\n\n{cow_list}\n\nExample: 10,8.5,9"
@@ -679,17 +675,6 @@ class ProductionCallBack(APIView):
         self.reset(session)
         self.send(user.phone, "✅ Milk production saved.")
 
-    # def handle_report(self, session, user, text):
-    #     today = date.today()
-    #     total = (
-    #         MilkRecord.objects
-    #         .filter(cow__farm=session.farm, date=today)
-    #         .aggregate(total=Sum("quantity_in_liters"))["total"]
-    #         or 0
-    #     )
-
-    #     self.reset(session)
-    #     self.send(user.phone, f"📊 Today’s total milk: {total} L")
     def handle_report(self, session, user, text):
     # 1️⃣ Generate PDF
         report = MilkProductionPDFReport(session.farm)
