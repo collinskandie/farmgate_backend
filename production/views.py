@@ -519,28 +519,7 @@ class ProductionCallBack(APIView):
 
         return HttpResponse("OK")
 
-    # =========================
-    # Message router
-    # =========================
-    # def route_message(self, phone, text):
-    #     session, _ = ChatSession.objects.get_or_create(phone=phone)
-
-    #     user = self.get_user_by_phone(phone)
-    #     if not user:
-    #         return self.send(phone, "❌ Your number is not linked to any account.")
-
-    #     handlers = {
-    #         "start": self.handle_start,
-    #         "menu": self.handle_menu,
-    #         "select_session": self.handle_select_session,
-    #         "enter_milk": self.handle_enter_milk,
-    #         "confirm_milk": self.handle_confirm_milk,
-    #         "report_incident": self.handle_incident,
-    #         "todays_report": self.handle_report,
-    #     }
-
-    #     handler = handlers.get(session.step, self.handle_start)
-    #     handler(session, user, text)
+    
     def route_message(self, phone, text):
         session, _ = ChatSession.objects.get_or_create(phone=phone)
 
@@ -566,6 +545,9 @@ class ProductionCallBack(APIView):
 
         handler = handlers.get(session.step, self.handle_start)
         handler(session, user, text)
+        session.updated_at = timezone.now()
+        session.save(update_fields=["updated_at"])
+
 
 
     # =========================
