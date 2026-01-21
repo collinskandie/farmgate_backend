@@ -384,4 +384,5 @@ class MilkProductionPDFReport:
             onLaterPages=self._footer,
         )
 
-        return self.file_path
+        return str(self.file_path)
+
