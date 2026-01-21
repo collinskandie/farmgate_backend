@@ -1,7 +1,8 @@
 import os
 from datetime import date, timedelta
 from decimal import Decimal
-
+from uuid import uuid4
+from pathlib import Path
 from django.conf import settings
 from django.db.models import Sum
 
@@ -70,12 +71,10 @@ class MilkProductionPDFReport:
         # -------------------------
         # Output path (git ignored)
         # -------------------------
-        reports_dir = os.path.join(settings.MEDIA_ROOT, "reports")
-        os.makedirs(reports_dir, exist_ok=True)
-
-        self.file_path = os.path.join(
-            reports_dir,
-            f"milk_report_farm_{farm.id}_{self.today}.pdf"
+        reports_dir = Path(settings.MEDIA_ROOT) / "reports"
+        reports_dir.mkdir(parents=True, exist_ok=True)
+        self.file_path = reports_dir / (
+            f"milk_report_farm_{farm.id}_{self.today}_{uuid4().hex}.pdf"
         )
 
     # ==================================================
@@ -337,13 +336,11 @@ class MilkProductionPDFReport:
                 # =========================
         # Charts (side by side)
         # =========================
-
         pie_chart = self._pie_chart(
             totals["morning"],
             totals["noon"],
             totals["evening"],
         )
-
         comparison_chart = self._comparison_chart(
             self._get_total_for_date(self.yesterday),
             totals["total"],
@@ -382,8 +379,6 @@ class MilkProductionPDFReport:
 
         elements.append(charts_table)
         elements.append(Spacer(1, 5))
-
-
         doc.build(
             elements,
             onFirstPage=self._footer,
