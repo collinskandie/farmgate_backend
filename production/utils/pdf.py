@@ -70,7 +70,7 @@ class MilkProductionPDFReport:
         # -------------------------
         # Output path (git ignored)
         # -------------------------
-        reports_dir = Path(settings.MEDIA_ROOT) / "reports"
+        reports_dir = Path(settings.MEDIA_ROOT).resolve() / "reports"
         reports_dir.mkdir(parents=True, exist_ok=True)
         self.file_path = reports_dir / (
             f"milk_report_farm_{farm.id}_{self.today}_{uuid4().hex}.pdf"
@@ -281,12 +281,12 @@ class MilkProductionPDFReport:
         print("PDF PATH USED:", self.file_path)
         print("CWD:", os.getcwd())
         doc = SimpleDocTemplate(
-            str(self.file_path),
+            str(self.file_path.resolve()),
             pagesize=landscape(A4),
-            leftMargin=2*cm,
-            rightMargin=2*cm,
-            topMargin=2*cm,
-            bottomMargin=2*cm,
+            leftMargin=1*cm,
+            rightMargin=1*cm,
+            topMargin=1*cm,
+            bottomMargin=1*cm,
         )
 
         elements = []
