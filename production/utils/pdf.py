@@ -277,6 +277,9 @@ class MilkProductionPDFReport:
     # Build PDF
     # ==================================================
     def generate(self):
+        import os
+        print("PDF PATH USED:", self.file_path)
+        print("CWD:", os.getcwd())
         doc = SimpleDocTemplate(
             str(self.file_path),
             pagesize=landscape(A4),
