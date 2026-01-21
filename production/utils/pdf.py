@@ -29,7 +29,6 @@ class MilkProductionPDFReport:
     """
     Executive-style milk production report (WhatsApp friendly).
     """
-
     def __init__(self, farm):
         self.farm = farm
         self.today = date.today()
