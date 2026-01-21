@@ -278,7 +278,7 @@ class MilkProductionPDFReport:
     # ==================================================
     def generate(self):
         doc = SimpleDocTemplate(
-            self.file_path,
+            str(self.file_path),
             pagesize=landscape(A4),
             leftMargin=2*cm,
             rightMargin=2*cm,
