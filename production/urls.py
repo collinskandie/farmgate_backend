@@ -2,7 +2,8 @@ from django.urls import path
 from .views import (
     MilkRecordAPIView,
     ProductionCallBack,
-    MilkBulkRecordAPIView
+    MilkBulkRecordAPIView,
+    MilkProductionReportDownloadAPIView
 )
 
 urlpatterns = [
@@ -14,4 +15,9 @@ urlpatterns = [
          name="production-callback"),
     path("milk-records/bulk/", MilkBulkRecordAPIView.as_view(),
          name="milk-record-bulk-create"),
+    path(
+        "reports/milk-production/download/",
+        MilkProductionReportDownloadAPIView.as_view(),
+        name="milk-production-report-download",
+    ),
 ]

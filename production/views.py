@@ -13,6 +13,8 @@ import requests
 from decouple import config
 from datetime import date
 from decimal import Decimal, InvalidOperation
+from django.http import FileResponse
+from production.utils.utils import generate_milk_report
 from production.utils.pdf import MilkProductionPDFReport
 from production.models import ChatSession, MilkRecord
 from accounts.models import User, Cow, Farm
@@ -118,371 +120,39 @@ class MilkRecordAPIView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-# class ProductionCallBack(APIView):
-#     authentication_classes = []
-#     permission_classes = []
+class MilkProductionReportDownloadAPIView(APIView):
+    permission_classes = [IsAuthenticated]
 
-#     PHONE_NUMBER_ID = "933662143166769"
-#     ACCESS_TOKEN = ""
+    def get(self, request):
+        user = request.user
 
-#     def get(self, request):
-#         VERIFY_TOKEN = "framgatego_verify_token"
+        if not hasattr(user, "farm"):
+            return Response(
+                {"detail": "User is not associated with a farm"},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
-#         mode = request.GET.get("hub.mode")
-#         token = request.GET.get("hub.verify_token")
-#         challenge = request.GET.get("hub.challenge")
+        pdf_path, total = generate_milk_report(user.farm)
 
-#         if mode == "subscribe" and token == VERIFY_TOKEN:
-#             return HttpResponse(challenge)
+        if not pdf_path or not os.path.exists(pdf_path):
+            return Response(
+                {"detail": "Report generation failed"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
-#         return HttpResponse("Forbidden", status=403)
+        with open(pdf_path, "rb") as pdf:
+            response = HttpResponse(
+                pdf.read(),
+                content_type="application/pdf"
+            )
 
-#     def post(self, request):
-#         payload = request.data
-#         print("🔥🔥🔥 POST WEBHOOK HIT 🔥🔥🔥")
-#         print(request.data)
+        filename = f"milk-production-report-{user.farm.id}.pdf"
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        response["Content-Length"] = os.path.getsize(pdf_path)
 
-#         try:
-#             entry = payload["entry"][0]
-#             change = entry["changes"][0]
-#             value = change["value"]
+        return response
 
-#             if "messages" not in value:
-#                 return HttpResponse("No message", status=200)
 
-#             message = value["messages"][0]
-
-#             # 🔒 Safety check (important)
-#             if message.get("type") != "text":
-#                 return HttpResponse("Ignored", status=200)
-
-#             from_number = message["from"]
-#             text = message["text"]["body"]
-
-#             print("Incoming:", from_number, text)
-
-#             self.send_whatsapp_message(
-#                 to=from_number,
-#                 text="Hello 👋 Welcome to Farmgate!"
-#             )
-
-#         except Exception as e:
-#             print("Webhook error:", e)
-
-#         return HttpResponse("OK", status=200)
-
-#     def send_whatsapp_message(self, to, text):
-#         url = f"https://graph.facebook.com/v18.0/{self.PHONE_NUMBER_ID}/messages"
-
-#         headers = {
-#             "Authorization": f"Bearer {self.ACCESS_TOKEN}",
-#             "Content-Type": "application/json"
-#         }
-
-#         payload = {
-#             "messaging_product": "whatsapp",
-#             "to": to,
-#             "text": {"body": text}
-#         }
-
-#         response = requests.post(url, headers=headers, json=payload)
-#         print("SEND STATUS:", response.status_code)
-#         print("SEND BODY:", response.text)
-
-
-# class ProductionCallBack(APIView):
-#     authentication_classes = []
-#     permission_classes = []
-#     VERIFY_TOKEN = config('VERIFY_TOKEN')
-#     PHONE_NUMBER_ID = config("PHONE_NUMBER_ID")
-#     ACCESS_TOKEN = config('WHATS_APP_API_KEY')
-
-#     # ==================================================
-#     # 🔐 Webhook verification
-#     # ==================================================
-#     def get(self, request):
-#         mode = request.GET.get("hub.mode")
-#         token = request.GET.get("hub.verify_token")
-#         challenge = request.GET.get("hub.challenge")
-
-#         if mode == "subscribe" and token == self.VERIFY_TOKEN:
-#             return HttpResponse(challenge)
-
-#         return HttpResponse("Forbidden", status=403)
-
-#     # ==================================================
-#     # 📩 Incoming messages
-#     # ==================================================
-#     def post(self, request):
-#         payload = request.data
-#         print("🔥 POST WEBHOOK HIT")
-
-#         try:
-#             value = payload["entry"][0]["changes"][0]["value"]
-
-#             if "messages" not in value:
-#                 return HttpResponse("OK")
-
-#             message = value["messages"][0]
-#             if message.get("type") != "text":
-#                 return HttpResponse("Ignored")
-
-#             phone = message["from"]
-#             text = message["text"]["body"].strip()
-
-#             print("Incoming:", phone, text)
-#             self.handle_message(phone, text)
-
-#         except Exception as e:
-#             print("Webhook error:", e)
-
-#         return HttpResponse("OK")
-
-#     # ==================================================
-#     # 🧠 Conversation brain
-#     # ==================================================
-#     def handle_message(self, phone, text):
-#         session, _ = ChatSession.objects.get_or_create(
-#             phone=phone,
-#             defaults={"step": "start"}
-#         )
-
-#         user = self.get_user_by_phone(phone)
-#         if not user:
-#             self.send_message(
-#                 phone,
-#                 "❌ Your phone number is not linked to any account. Please contact admin."
-#             )
-#             return
-#         # -----------------------------------------------
-#         # STEP 0: Resolve farm
-#         # -----------------------------------------------
-#         if session.step == "start":
-#             farms = user.farms.all()
-
-#             if not farms.exists():
-#                 self.send_message(
-#                     phone,
-#                     "❌ You are not assigned to any farm."
-#                 )
-#                 return
-
-#             # For now: auto-pick first farm
-#             session.farm = farms.first()
-#             session.step = "menu"
-#             session.save()
-
-#             self.send_message(
-#                 phone,
-#                 f"👋 Hello {user.full_name}\n\n"
-#                 "What would you like to do?\n\n"
-#                 "1️⃣ Enter milk production\n"
-#                 "2️⃣ Report incident"
-#             )
-#             return
-
-#         # -----------------------------------------------
-#         # MENU
-#         # -----------------------------------------------
-#         if session.step == "menu":
-#             if text == "1":
-#                 session.step = "select_session"
-#                 session.save()
-#                 self.send_message(
-#                     phone,
-#                     "Select milk session:\n\n"
-#                     "1️⃣ Morning\n"
-#                     "2️⃣ Afternoon\n"
-#                     "3️⃣ Evening"
-#                 )
-#                 return
-
-#             if text == "2":
-#                 session.step = "report_incident"
-#                 session.save()
-#                 self.send_message(phone, "Please describe the incident.")
-#                 return
-
-#             self.send_message(phone, "Please reply with 1 or 2.")
-#             return
-
-#         # -----------------------------------------------
-#         # SESSION (Morning / Evening)
-#         # -----------------------------------------------
-#         if session.step == "select_session":
-#             if text not in ["1", "2", "3"]:
-#                 self.send_message(
-#                     phone,
-#                     f"👋 Hello {user.full_name}\n\n"
-#                     "Please reply with 1 for Morning or 2 for Afternoon or 3 for Evening."
-#                 )
-#                 return
-
-#             session.data["session"] = (
-#                 MilkRecord.MORNING if text == "1" else MilkRecord.AFTERNOON if text == "2" else MilkRecord.EVENING
-#             )
-#             session.step = "enter_milk"
-#             session.save()
-
-#             cows = Cow.objects.filter(farm=session.farm).order_by("id")
-#             if not cows.exists():
-#                 self.send_message(phone, "❌ No cows found for this farm.")
-#                 return
-
-#             cow_list = "\n".join(
-#                 [f"{i+1}. {cow.tag_number}" for i, cow in enumerate(cows)]
-#             )
-
-#             self.send_message(
-#                 phone,
-#                 "Enter milk amounts (litres) separated by commas "
-#                 "in the SAME order as below:\n\n"
-#                 f"{cow_list}\n\n"
-#                 "Example: 10,8.5,9"
-#             )
-#             return
-
-#         if session.step == "enter_milk":
-#             cows = list(Cow.objects.filter(farm=session.farm).order_by("id"))
-
-#             try:
-#                 values = [Decimal(v.strip()) for v in text.split(",")]
-#             except (InvalidOperation, ValueError):
-#                 self.send_message(
-#                     phone,
-#                     "❌ Invalid format.\nExample: 10,8.5,9"
-#                 )
-#                 return
-
-#             if len(values) != len(cows):
-#                 self.send_message(
-#                     phone,
-#                     f"❌ You sent {len(values)} values but you have {len(cows)} cows."
-#                 )
-#                 return
-
-#             # 👇 STORE, DO NOT SAVE YET
-#             session.data["milk_values"] = [str(v) for v in values]
-#             session.step = "confirm_milk"
-#             session.save()
-
-#             # Build confirmation message
-#             summary_lines = []
-#             for cow, qty in zip(cows, values):
-#                 summary_lines.append(f"{cow.tag_number}: {qty} L")
-
-#             summary = "\n".join(summary_lines)
-
-#             self.send_message(
-#                 phone,
-#                 "🧾 Please confirm milk production:\n\n"
-#                 f"{summary}\n\n"
-#                 "Reply:\n"
-#                 "1️⃣ Confirm & Save\n"
-#                 "2️⃣ Re-enter quantities"
-#             )
-#             return
-
-#             # -----------------------------------------------
-#         # CONFIRM MILK
-#         # -----------------------------------------------
-#         if session.step == "confirm_milk":
-#             if text == "2":
-#                 # User wants to re-enter
-#                 session.step = "enter_milk"
-#                 session.data.pop("milk_values", None)
-#                 session.save()
-
-#                 cows = Cow.objects.filter(farm=session.farm).order_by("id")
-#                 cow_list = "\n".join(
-#                     [f"{i+1}. {cow.tag_number}" for i, cow in enumerate(cows)]
-#                 )
-
-#                 self.send_message(
-#                     phone,
-#                     "🔁 Okay, please re-enter milk amounts "
-#                     "in the SAME order as below:\n\n"
-#                     f"{cow_list}\n\n"
-#                     "Example: 10,8.5,9"
-#                 )
-#                 return
-
-#             if text != "1":
-#                 self.send_message(
-#                     phone,
-#                     "Please reply:\n"
-#                     "1️⃣ Confirm & Save\n"
-#                     "2️⃣ Re-enter quantities"
-#                 )
-#                 return
-
-#             # ✅ CONFIRM & SAVE
-#             cows = list(Cow.objects.filter(farm=session.farm).order_by("id"))
-#             values = [Decimal(v) for v in session.data.get("milk_values", [])]
-
-#             today = date.today()
-#             session_type = session.data["session"]
-
-#             for cow, qty in zip(cows, values):
-#                 MilkRecord.objects.update_or_create(
-#                     cow=cow,
-#                     date=today,
-#                     session=session_type,
-#                     defaults={
-#                         "quantity_in_liters": qty,
-#                         "recorded_by": user,
-#                     }
-#                 )
-
-#             self.reset_session(session)
-
-#             self.send_message(
-#                 phone,
-#                 "✅ Milk production saved successfully. Thank you!"
-#             )
-#             return
-
-#         # -----------------------------------------------
-#         # INCIDENT
-#         # -----------------------------------------------
-#         if session.step == "report_incident":
-#             # You can wire this to an Incident model later
-#             self.reset_session(session)
-#             self.send_message(
-#                 phone,
-#                 "⚠️ Incident reported successfully."
-#             )
-
-#     # ==================================================
-#     # 🔎 Helpers
-#     # ==================================================
-#     def get_user_by_phone(self, phone):
-#         try:
-#             return User.objects.get(phone=phone)
-#         except User.DoesNotExist:
-#             return None
-
-#     def reset_session(self, session):
-#         session.step = "menu"
-#         session.data = {}
-#         session.save()
-
-#     def send_message(self, to, text):
-#         url = f"https://graph.facebook.com/v18.0/{self.PHONE_NUMBER_ID}/messages"
-
-#         headers = {
-#             "Authorization": f"Bearer {self.ACCESS_TOKEN}",
-#             "Content-Type": "application/json"
-#         }
-
-#         payload = {
-#             "messaging_product": "whatsapp",
-#             "to": to,
-#             "text": {"body": text}
-#         }
-
-#         response = requests.post(url, headers=headers, json=payload)
-#         print("SEND:", response.status_code, response.text)
 class ProductionCallBack(APIView):
     authentication_classes = []
     permission_classes = []
@@ -524,7 +194,6 @@ class ProductionCallBack(APIView):
 
         return HttpResponse("OK")
 
-    
     def route_message(self, phone, text):
         session, _ = ChatSession.objects.get_or_create(phone=phone)
 
@@ -553,11 +222,10 @@ class ProductionCallBack(APIView):
         session.updated_at = timezone.now()
         session.save(update_fields=["updated_at"])
 
-
-
     # =========================
     # Handlers
     # =========================
+
     def handle_start(self, session, user, text):
         farm = user.farms.first()
         if not farm:
@@ -577,6 +245,7 @@ class ProductionCallBack(APIView):
             f"👋 Hello {user.full_name}\n\nWhat would you like to do?\n\n" +
             "\n".join(menu)
         )
+
     def handle_menu(self, session, user, text):
         if text == "1":
             session.step = "select_session"
@@ -587,7 +256,8 @@ class ProductionCallBack(APIView):
             )
 
         if text == "2" and user.role in {User.MANAGER, User.ACCOUNT_OWNER}:
-            self.send(user.phone, "📊 Generating today’s report, this may take a moment.")
+            self.send(
+                user.phone, "📊 Generating today’s report, this may take a moment.")
             return self.handle_report(session, user, text)
 
         self.send(user.phone, "❌ Invalid option.")
@@ -605,7 +275,8 @@ class ProductionCallBack(APIView):
         session.step = "enter_milk"
         session.save()
         cows = Cow.objects.filter(farm=session.farm)
-        cow_list = "\n".join(f"{i+1}. {c.tag_number}" for i, c in enumerate(cows))
+        cow_list = "\n".join(
+            f"{i+1}. {c.tag_number}" for i, c in enumerate(cows))
         self.send(
             user.phone,
             f"Enter milk amounts separated by commas:\n\n{cow_list}\n\nExample: 10,8.5,9"
@@ -663,7 +334,7 @@ class ProductionCallBack(APIView):
         self.send(user.phone, "✅ Milk production saved.")
 
     def handle_report(self, session, user, text):
-    # 1️⃣ Generate PDF
+        # 1️⃣ Generate PDF
         report = MilkProductionPDFReport(session.farm)
         pdf_path = report.generate()
 
@@ -690,7 +361,6 @@ class ProductionCallBack(APIView):
         # 5️⃣ Reset conversation
         self.reset(session)
 
-
     def handle_incident(self, session, user, text):
         self.reset(session)
         self.send(user.phone, "⚠️ Incident reported.")
@@ -702,7 +372,6 @@ class ProductionCallBack(APIView):
         session.step = "start"
         session.data = {}
         session.save()
-
 
     def send(self, phone, text):
         requests.post(
@@ -720,7 +389,7 @@ class ProductionCallBack(APIView):
 
     def get_user_by_phone(self, phone):
         return User.objects.filter(phone=phone).first()
-    
+
     def upload_pdf(self, file_path):
         url = f"https://graph.facebook.com/v18.0/{self.PHONE_NUMBER_ID}/media"
 
@@ -741,8 +410,8 @@ class ProductionCallBack(APIView):
         response = requests.post(url, headers=headers, files=files, data=data)
         response.raise_for_status()
 
-        return response.json()["id"]  # media_id   
-    
+        return response.json()["id"]  # media_id
+
     def send_pdf(self, phone, media_id):
         url = f"https://graph.facebook.com/v18.0/{self.PHONE_NUMBER_ID}/messages"
 
@@ -763,8 +432,6 @@ class ProductionCallBack(APIView):
 
         response = requests.post(url, headers=headers, json=payload)
         print("SEND PDF:", response.status_code, response.text)
- 
-
 
 
 class MilkBulkRecordAPIView(APIView):
