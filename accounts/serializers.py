@@ -107,16 +107,7 @@ class LoginSerializer(serializers.Serializer):
 class CowSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cow
-        fields = [
-            "id",
-            "name",
-            "tag_number",
-            "breed",
-            "date_of_birth",
-            # "health_status",
-            "created_at",
-        ]
-
+        fields = "__all__"
 
 class FarmSerializer(serializers.ModelSerializer):
     class Meta:

@@ -114,23 +114,86 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
-
 class Cow(models.Model):
-    """
-    Represents a cow in the farm.
-    """
-    name = models.CharField(max_length=255)
+    HEIFER = "heifer"
+    LACTATING = "lactating"
+    DRY = "dry"
+
+    STATUS_CHOICES = [
+        (HEIFER, "Heifer"),
+        (LACTATING, "Active Milker"),
+        (DRY, "Dry Milker"),
+    ]
+
     farm = models.ForeignKey(
         Farm,
         on_delete=models.CASCADE,
         related_name="cows",
     )
+
     tag_number = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=255, blank=True)
+
     breed = models.CharField(max_length=100)
+
     date_of_birth = models.DateField()
-    is_pregnant = models.BooleanField(default=False)
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=HEIFER,
+    )
+
+    current_lactation_number = models.PositiveIntegerField(default=0)
+
+    is_active = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def age_in_months(self):
+        from datetime import date
+        return (date.today() - self.date_of_birth).days // 30
+
     def __str__(self):
-        return f"Cow {self.tag_number} ({self.farm.name})"
+        return f"{self.tag_number} ({self.status})"
+
+    def clean(self):
+        if self.status == Cow.HEIFER and self.age_in_months() < 12:
+            raise ValidationError("Heifer too young")
+
+        if self.status == Cow.LACTATING and self.current_lactation_number == 0:
+            raise ValidationError("Lactating cow must have lactation history")
+
+    @property
+    def is_pregnant(self):
+        return self.pregnancy_set.filter(status="ongoing").exists()
+
+
+class BreedingEvent(models.Model):
+    cow = models.ForeignKey(
+        Cow,
+        on_delete=models.CASCADE,
+        related_name="breeding_events"
+    )
+    method = models.CharField(
+        max_length=20,
+        choices=[("natural", "Natural"), ("ai", "AI")]
+    )
+    date_bred = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class Pregnancy(models.Model):
+    cow = models.ForeignKey(Cow, on_delete=models.CASCADE)
+    breeding_event = models.ForeignKey(
+        BreedingEvent, on_delete=models.CASCADE)
+    confirmed = models.BooleanField(default=False)
+    expected_calving_date = models.DateField()
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ("ongoing", "Ongoing"),
+            ("completed", "Completed"),
+            ("aborted", "Aborted"),
+        ],
+    )

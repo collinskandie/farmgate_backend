@@ -294,27 +294,6 @@ class FarmDetailsAPIView(APIView):
 
 class CreateCowAPIView(APIView):
     permission_classes = [IsAuthenticated]
-    
-    # def get(self, request):
-    #     user = request.user
-
-    #     cows = Cow.objects.select_related("farm").all()
-    #     cow_list = [
-    #         {
-    #             "id": cow.id,
-    #             "name": cow.name,
-    #             "tag_number": cow.tag_number,
-    #             "breed": cow.breed,
-    #             "date_of_birth": cow.date_of_birth,
-    #             "farm": {
-    #                 "id": cow.farm.id,
-    #                 "name": cow.farm.name,
-    #             },
-    #         }
-    #         for cow in cows
-    #     ]
-
-    #     return Response(cow_list, status=status.HTTP_200_OK)
     def get(self, request):
         user = request.user
 
