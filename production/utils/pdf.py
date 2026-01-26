@@ -262,11 +262,11 @@ class MilkProductionPDFReport:
 
         # 🎨 Correct color logic (PER BAR)
         if today_total > yesterday_total:
-            chart.bars[(0, 0)].fillColor = colors.red    # Yesterday
-            chart.bars[(0, 1)].fillColor = colors.green  # Today
+            chart.bars[(0, 0)].fillColor = colors.HexColor("#c62828")    # Yesterday
+            chart.bars[(0, 1)].fillColor = colors.HexColor("#2e7d32")   # Today
         elif today_total < yesterday_total:
-            chart.bars[(0, 0)].fillColor = colors.green  # Yesterday
-            chart.bars[(0, 1)].fillColor = colors.red    # Today
+            chart.bars[(0, 0)].fillColor = colors.HexColor("#2e7d32")   # Yesterday
+            chart.bars[(0, 1)].fillColor = colors.HexColor("#c62828")    # Today
         else:
             chart.bars[(0, 0)].fillColor = colors.grey
             chart.bars[(0, 1)].fillColor = colors.grey
