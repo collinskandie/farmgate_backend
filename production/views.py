@@ -19,6 +19,7 @@ from accounts.models import User, Cow, Farm
 from datetime import timedelta
 from django.utils import timezone
 from django.db.models import Sum
+from django.utils.dateparse import parse_date
 
 
 # from rest_framework.views import APIView
@@ -87,6 +88,7 @@ class MilkRecordAPIView(APIView):
 
     def get(self, request):
         user = request.user
+        date_str = request.query_params.get("date")
 
         records = MilkRecord.objects.select_related(
             "cow",
@@ -95,11 +97,7 @@ class MilkRecordAPIView(APIView):
         )
 
         # 🔓 System users see everything
-        if user.is_system_user():
-            pass  # no filtering, full access
-
-        # 🔒 Tenant users are scoped to their account
-        else:
+        if not user.is_system_user():
             if not user.account:
                 return Response(
                     {"detail": "User has no account assigned"},
@@ -110,8 +108,15 @@ class MilkRecordAPIView(APIView):
                 cow__farm__account=user.account
             )
 
+        # 📅 Filter by date if provided
+        if date_str:
+            date = parse_date(date_str)
+            if date:
+                records = records.filter(date=date)
+
         serializer = MilkRecordSerializer(records, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 # class ProductionCallBack(APIView):
 #     authentication_classes = []
