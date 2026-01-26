@@ -228,22 +228,53 @@ class MilkProductionPDFReport:
         d.add(pie)
         return d
 
-    def _comparison_chart(self, yesterday, today):
-        d = Drawing(300, 200)
+    # def _comparison_chart(self, yesterday, today):
+    #     d = Drawing(300, 200)
+    #     chart = VerticalBarChart()
+    #     chart.data = [[float(yesterday), float(today)]]
+    #     chart.categoryAxis.categoryNames = ["Yesterday", "Today"]
+    #     chart.valueAxis.valueMin = 0
+    #     chart.barWidth = 40
+    #     chart.groupSpacing = 30
+    #     chart.x = 60
+    #     chart.y = 40
+    #     chart.height = 120
+    #     chart.width = 180
+    #     chart.bars[0].fillColor = colors.HexColor("#0A2E5C")
+
+    #     d.add(chart)
+    #     return d
+    def _comparison_chart(self, yesterday_total, today_total):
+        drawing = Drawing(300, 200)
+
         chart = VerticalBarChart()
-        chart.data = [[float(yesterday), float(today)]]
+        chart.data = [[float(yesterday_total), float(today_total)]]
         chart.categoryAxis.categoryNames = ["Yesterday", "Today"]
+
         chart.valueAxis.valueMin = 0
         chart.barWidth = 40
         chart.groupSpacing = 30
+
         chart.x = 60
         chart.y = 40
         chart.height = 120
         chart.width = 180
-        chart.bars[0].fillColor = colors.HexColor("#0A2E5C")
 
-        d.add(chart)
-        return d
+        # 🎨 Correct color logic (PER BAR)
+        if today_total > yesterday_total:
+            chart.bars[(0, 0)].fillColor = colors.red    # Yesterday
+            chart.bars[(0, 1)].fillColor = colors.green  # Today
+        elif today_total < yesterday_total:
+            chart.bars[(0, 0)].fillColor = colors.green  # Yesterday
+            chart.bars[(0, 1)].fillColor = colors.red    # Today
+        else:
+            chart.bars[(0, 0)].fillColor = colors.grey
+            chart.bars[(0, 1)].fillColor = colors.grey
+
+        drawing.add(chart)
+        return drawing
+
+
 
     # ==================================================
     # Narration
@@ -318,26 +349,7 @@ class MilkProductionPDFReport:
         )
         elements.append(Spacer(1, 10))
 
-        # Charts
-        # elements.append(Paragraph("Milk Distribution (Today)", self.styles["Heading3"]))
-        # elements.append(self._pie_chart(
-        #     totals["morning"],
-        #     totals["noon"],
-        #     totals["evening"],
-        # ))
-        # elements.append(Spacer(1, 24))
 
-        # elements.append(Paragraph("Total Production Comparison", self.styles["Heading3"]))
-        # elements.append(
-        #     self._comparison_chart(
-        #         self._get_total_for_date(self.yesterday),
-        #         totals["total"],
-        #     )
-        # )
-        # elements.append(Spacer(1, 30))
-                # =========================
-        # Charts (side by side)
-        # =========================
         pie_chart = self._pie_chart(
             totals["morning"],
             totals["noon"],
