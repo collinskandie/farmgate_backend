@@ -75,6 +75,7 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://ab135b352750.ngrok-free.app",
+    "https://dairify.syknown.co.ke"
     "http://172.16.0.112",
     "http://41.89.183.112"
 ]
